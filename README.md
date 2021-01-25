@@ -42,8 +42,10 @@
         
 调用示例：
   
-  //构造soap请求信息
+  	//构造soap请求信息
+  
 	//服务地址
+	
 	var url = "http://localhost:44351/WebService1.asmx"; 
 		WCF用："http://localhost:44351/ServiceTest.svc";
   
