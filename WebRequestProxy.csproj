@@ -9,12 +9,15 @@
 
   <PropertyGroup>
     <TargetFrameworks>netstandard2.0;net452</TargetFrameworks>
-    <Version>1.2.6</Version>
+    <Version>1.2.7</Version>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <Authors>WondersGroup</Authors>
     <Description>WebRequestProxy</Description>
     <Title>$(AssemblyName)</Title>
     <GenerateAssemblyInfo>true</GenerateAssemblyInfo>
+    <PackageProjectUrl>https://github.com/stoneson/WebRequestProxy</PackageProjectUrl>
+    <PackageTags>WebRequest</PackageTags>
+    <PackageReleaseNotes>利用WebRequest/WebResponse进行WebService/WCF调用的类</PackageReleaseNotes>
   </PropertyGroup>
 
   <ItemGroup>

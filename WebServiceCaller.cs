@@ -143,13 +143,16 @@ namespace WebRequestProxy
         public static XmlDocument QuerySoapWebService(String url, String methodName, IDictionary<string, object> pars, IDictionary<string, string> headers = null)
         {
             //loadWSDL(url);
-            string xmlNs = GetNamespace(url);
-            var sso = GetServiceOperation(url, methodName);
+            var ssp = GetServiceSoap(url);
+            string xmlNs = GetNamespace(url, ssp).NullToStr();
+            var sso = GetServiceOperation(url, methodName, ssp);
 
             url = getUrl(url);
 
             // 获取请求对象
-            var request = (HttpWebRequest)HttpWebRequest.Create(url);
+            var request = (HttpWebRequest)HttpWebRequest.Create(!string.IsNullOrWhiteSpace(ssp.Address) && ssp.Address.Length > 6
+                 && (ssp.Address?.ToLower().Contains("localhost") == false
+                  || ssp.Address?.EndsWith("/soap", StringComparison.OrdinalIgnoreCase) == true) ? ssp.Address : url);
             // 设置请求head
             request.Method = "POST";
             request.ContentType = "text/xml; charset=utf-8";
@@ -880,16 +883,17 @@ namespace WebRequestProxy
                 HCenter.CommonUtils.Cache.MemoryCacheHelper.Instance.Set(getUrl(url), ssp, HCenter.CommonUtils.Cache.ExpiresTime.Minutes_30);
                 return ssp;
             },
-            HCenter.CommonUtils.Cache.ExpiresTime.Minutes_30);
+            HCenter.CommonUtils.Cache.ExpiresTime.Minutes_30, true, (ssp) => { return ssp != null && ssp.DicOperations?.Count > 0; });
         }
         /// <summary>
         /// 获取wsdl中的名字空间
         /// </summary>
         /// <param name="url"> wsdl地址</param>
         /// <returns> 名字空间</returns>
-        private static string GetNamespace(String url)
+        private static string GetNamespace(String url, ServiceSoap ssp = null)
         {
-            var ssp = GetServiceSoap(url);
+            if (ssp == null || ssp.Operations == null || ssp.Operations.Count == 0)
+                ssp = GetServiceSoap(url);
             return ssp?.Namespace;
         }
         /// <summary>
@@ -898,11 +902,12 @@ namespace WebRequestProxy
         /// <param name="url"></param>
         /// <param name="methodName"></param>
         /// <returns></returns>
-        private static ServiceOperation GetServiceOperation(String url, String methodName)
+        private static ServiceOperation GetServiceOperation(String url, String methodName, ServiceSoap ssp = null)
         {
-            var ssp = GetServiceSoap(url);
-            ServiceOperation so;
-            if (ssp.DicOperations.TryGetValue(methodName, out so) == false || so == null)
+            if (ssp == null || ssp.Operations == null || ssp.Operations.Count == 0)
+                ssp = GetServiceSoap(url);
+            ServiceOperation so = null;
+            if (ssp.DicOperations?.TryGetValue(methodName, out so) == false || so == null)
             {
                 so = new ServiceOperation() { Name = methodName };
             }
@@ -915,9 +920,9 @@ namespace WebRequestProxy
         /// <param name="url"></param>
         /// <param name="methodName"></param>
         /// <returns></returns>
-        private static List<OperationInputOutput> GetMethodInputs(String url, String methodName)
+        private static List<OperationInputOutput> GetMethodInputs(String url, String methodName, ServiceSoap ssp = null)
         {
-            var so = GetServiceOperation(url, methodName);
+            var so = GetServiceOperation(url, methodName, ssp);
             return so.Inputs;
         }
         /// <summary>
@@ -926,9 +931,9 @@ namespace WebRequestProxy
         /// <param name="url"></param>
         /// <param name="methodName"></param>
         /// <returns></returns>
-        private static OperationInputOutput GetMethodOutput(String url, String methodName)
+        private static OperationInputOutput GetMethodOutput(String url, String methodName, ServiceSoap ssp = null)
         {
-            var so = GetServiceOperation(url, methodName);
+            var so = GetServiceOperation(url, methodName, ssp);
             return so.Output;
         }
 
@@ -962,6 +967,8 @@ namespace WebRequestProxy
             var ssp = new ServiceSoap();
 
             #region sevicesNode
+            if (doc.DocumentElement == null) return ssp;
+
             var sevicesNode = doc.DocumentElement.GetElementsByTagName("wsdl:service");
             if (sevicesNode == null || sevicesNode.Count == 0)
                 sevicesNode = doc.DocumentElement.GetElementsByTagName("service");
